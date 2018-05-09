@@ -13,6 +13,8 @@ public:
     
     // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
+	//Ïß³Ì
+	void HelloWorld::readingThread(int w, int h, int s_width, int s_height);
 
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);

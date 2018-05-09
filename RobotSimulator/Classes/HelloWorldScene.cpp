@@ -185,14 +185,63 @@ for (int i = 1; i <= robotNumber; i++){
 	robotSprites.pushBack(mySprite);
 	log("%s", ".................");
 }
-for (int i = 0; i < robotNumber; i++){
-	auto moveTo = MoveTo::create(2, Vec2(500, 200));
-	robotSprites.at(i)->runAction(moveTo);
-}
 
+//开启robot刷新线程
+std::thread t1(&HelloWorld::readingThread, this, w, h,  s.width,s.height);
+//把线程和主线程分离开
+t1.detach();
 return true;
 }
 
+void HelloWorld::readingThread(int w, int h, int s_width, int s_height)
+{
+	//通过(FileUtils)这个工具获取和写入文件--读map文件
+	auto fu = FileUtils::getInstance();
+	this->getChildByTag(1);
+	for (int i = 0; i < 1000; i++){
+		Sleep(1000);
+		//读取robot
+		Data robot_d = fu->getDataFromFile(fu->fullPathForFilename("../../../TestRobot/Robot_Current_Position.txt"));
+		unsigned char* robot_tmp = robot_d.getBytes();
+		int robot_number = robot_d.getSize();
+		vector<string> robots;
+		string robot_temp = "";
+		for (int i = 0; i < robot_number; ++i){
+			char mid = (*robot_tmp);
+			if (mid == '0' || mid == '1' || mid == '2' || mid == '3' || mid == '4' || mid == '5' || mid == '6' || mid == '7' || mid == '8' || mid == '9' || mid == ','){
+				robot_temp = robot_temp + mid;
+			}
+			else{
+				if (robot_temp.size() > 0){
+					robots.push_back(robot_temp);
+					robot_temp = "";
+				}
+			}
+			++robot_tmp;
+		}
+		robots.push_back(robot_temp);
+		//画robot
+		float r = s_width / (2 * w);
+		float pic = 256.0;
+		int robotNumber = atoi(robots[0].c_str());
+		Vector<Sprite*> robotSprites;
+		for (int i = 1; i <= robotNumber; i++){
+			string robotStr = robots[i].c_str();
+			string r_c = ",";
+			vector<string> r_v;
+			while (robotStr.find(r_c) != -1)
+			{
+				r_v.push_back(robotStr.substr(0, robotStr.find(r_c)));
+				robotStr = robotStr.substr(robotStr.find(r_c) + 1, robotStr.size());
+			}
+			r_v.push_back(robotStr);
+			auto moveTo = MoveTo::create(1, Vec2(s_width*(atoi(r_v[2].c_str())) / w - r, s_height*(atoi(r_v[1].c_str())) / h - r));
+			this->getChildByTag(i)->runAction(moveTo);
+		}
+		
+	}
+	
+}
 
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
