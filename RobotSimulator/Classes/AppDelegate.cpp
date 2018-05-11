@@ -1,5 +1,15 @@
 #include "AppDelegate.h"
 #include "HelloWorldScene.h"
+#include <fstream>
+#include <iostream>
+#include <windows.h>  
+#include  <direct.h>  
+#include <string.h>
+#include  <stdio.h>  
+#include <vector>
+#include <list>   
+using namespace std;
+
 
 // #define USE_AUDIO_ENGINE 1
 // #define USE_SIMPLE_AUDIO_ENGINE 1
@@ -26,6 +36,7 @@ static cocos2d::Size largeResolutionSize = cocos2d::Size(2048, 1536);
 
 AppDelegate::AppDelegate()
 {
+
 }
 
 AppDelegate::~AppDelegate() 
@@ -45,6 +56,66 @@ void AppDelegate::initGLContextAttrs()
     GLContextAttrs glContextAttrs = {8, 8, 8, 8, 24, 8};
 
     GLView::setGLContextAttrs(glContextAttrs);
+	//读取config-更改界面大小
+	//通过(FileUtils)这个工具获取和写入文件
+	auto fu = FileUtils::getInstance();
+	Data config_d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/Config.txt"));
+	unsigned char* config_tmp = config_d.getBytes();
+	int config_number = config_d.getSize();
+	vector<string> configs;
+	string config_temp = "";
+	for (int i = 0; i < config_number; ++i){
+		char mid = (*config_tmp);
+		if (mid == '0' || mid == '1' || mid == '2' || mid == '3' || mid == '4' || mid == '5' || mid == '6' || mid == '7' || mid == '8' || mid == '9' || mid == ','){
+			config_temp = config_temp + mid;
+		}
+		else{
+			if (config_temp.size() > 0){
+				configs.push_back(config_temp);
+				config_temp = "";
+			}
+		}
+		++config_tmp;
+	}
+	configs.push_back(config_temp);
+	int	DESIGNRESOLUTIONSIZE = atoi(configs[5].c_str());
+
+
+	//根据map比例来决定大小
+	Data d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/InitMap.txt"));
+	unsigned char* tmp = d.getBytes();
+	int number = d.getSize();
+	vector<string> results;
+	string temp = "";
+	for (int i = 0; i < number; ++i){
+		char mid = (*tmp);
+		if (mid == '0' || mid == '1' || mid == '2' || mid == '3' || mid == '4' || mid == '5' || mid == '6' || mid == '7' || mid == '8' || mid == '9' || mid == ','){
+			temp = temp + mid;
+		}
+		else{
+			if (temp.size() > 0){
+				results.push_back(temp);
+				temp = "";
+			}
+		}
+		++tmp;
+	}
+	results.push_back(temp);
+	//读取行列
+	string str = results[0].c_str();
+	string c = ",";
+	vector<string> v;
+
+	while (str.find(c) != -1)
+	{
+		v.push_back(str.substr(0, str.find(c)));
+		str = str.substr(str.find(c) + 1, str.size());
+	}
+	v.push_back(str);
+	//画栅格
+	int w = atoi(v[1].c_str());
+	int h = atoi(v[0].c_str());
+	designResolutionSize = cocos2d::Size(DESIGNRESOLUTIONSIZE, DESIGNRESOLUTIONSIZE*h*1.0/w);
 }
 
 // if you want to use the package manager to install more packages,  
