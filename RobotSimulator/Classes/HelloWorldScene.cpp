@@ -63,7 +63,7 @@ else
 // create menu, it's an autorelease object
 auto menu = Menu::create(closeItem, NULL);
 menu->setPosition(Vec2::ZERO);
-this->addChild(menu, 1);
+//this->addChild(menu, 1);
 
 /////////////////////////////
 // 3. add your codes below...
@@ -113,6 +113,24 @@ while (OBSTACLECOLOR.find(OBSTACLECOLOR_c) != -1)
 	OBSTACLECOLOR = OBSTACLECOLOR.substr(OBSTACLECOLOR.find(OBSTACLECOLOR_c) + 1, OBSTACLECOLOR.size());
 }
 OBSTACLECOLOR_v.push_back(atoi(OBSTACLECOLOR.c_str()));
+string BulletCOLOR = configs[8].c_str();
+string BulletCOLOR_c = ",";
+vector<int> BulletCOLOR_v;
+while (BulletCOLOR.find(BulletCOLOR_c) != -1)
+{
+	BulletCOLOR_v.push_back(atoi(BulletCOLOR.substr(0, BulletCOLOR.find(BulletCOLOR_c)).c_str()));
+	BulletCOLOR = BulletCOLOR.substr(BulletCOLOR.find(BulletCOLOR_c) + 1, BulletCOLOR.size());
+}
+BulletCOLOR_v.push_back(atoi(BulletCOLOR.c_str()));
+string BulletPosition = configs[9].c_str();
+string BulletPosition_c = ",";
+vector<int> BulletPosition_v;
+while (BulletPosition.find(BulletPosition_c) != -1)
+{
+	BulletPosition_v.push_back(atoi(BulletPosition.substr(0, BulletPosition.find(BulletPosition_c)).c_str()));
+	BulletPosition = BulletPosition.substr(BulletPosition.find(BulletPosition_c) + 1, BulletPosition.size());
+}
+BulletPosition_v.push_back(atoi(BulletPosition.c_str()));
 //画背景
 auto red = LayerColor::create(Color4B(242, 239, 230, 255), visibleSize.width, visibleSize.height);
 this->addChild(red, 0);
@@ -190,7 +208,7 @@ for(int i = 1; i <= h; i++){
 }
 
 //读取robot
-Data robot_d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/Robot_Init_Position.txt"));
+Data robot_d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/Robot_Current_Position.txt"));
 unsigned char* robot_tmp = robot_d.getBytes();
 int robot_number = robot_d.getSize();
 vector<string> robots;
@@ -229,23 +247,66 @@ for (int i = 1; i <= robotNumber; i++){
 	mySprite->setScale(1.5*r/pic);
 	mySprite->setPosition(Vec2(s.width*(atoi(r_v[2].c_str())) / w-r, s.height*(atoi(r_v[1].c_str())) / h-r));
 	this->addChild(mySprite);
+	//创建编号
+	std::string s_tag = Value(i).asString();
+	auto label = Label::createWithSystemFont(s_tag, "Arail", r / 1.5);
+	label->setPosition(Vec2(s.width*(atoi(r_v[2].c_str())) / w-r, s.height*(atoi(r_v[1].c_str())) / h-2*r));
+	label->setColor(Color3B(255, 0, 0));
+	label->setTag(1000000+i);
+	this->addChild(label);
+	//创建aim place
+	auto aimPlace = Label::createWithSystemFont(s_tag, "Arail", r*1.5);
+	aimPlace->setPosition(Vec2(s.width*(atoi(r_v[3].c_str())) / w - r, s.height*(atoi(r_v[4].c_str())) / h - r));
+	aimPlace->setColor(Color3B(255, 0, 0));
+	aimPlace->setTag(2000000 + i);
+	this->addChild(aimPlace);
 
 }
 
+
 //开启robot刷新线程
-std::thread t1(&HelloWorld::readingThread, this, w, h, s.width, s.height, SPEED, PERIOD, PERIODNUMBER);
+std::thread t1(&HelloWorld::readingThread, this, w, h, s.width, s.height, SPEED, PERIOD, PERIODNUMBER, OPENBULLETSCREEN,
+	BulletCOLOR_v[0], BulletCOLOR_v[1], BulletCOLOR_v[2], BulletPosition_v[0], BulletPosition_v[1]);
 //把线程和主线程分离开
 t1.detach();
 return true;
 }
 
-void HelloWorld::readingThread(int w, int h, int s_width, int s_height, int SPEED, int PERIOD, int PERIODNUMBER)
+void HelloWorld::readingThread(int w, int h, int s_width, int s_height, int SPEED, int PERIOD, int PERIODNUMBER, int OPENBULLETSCREEN,
+	int BulletCOLOR_1, int BulletCOLOR_2, int BulletCOLOR_3,int BulletPosition_1,int BulletPosition_2)
 {
 	//通过(FileUtils)这个工具获取和写入文件--读map文件
 	auto fu = FileUtils::getInstance();
-	this->getChildByTag(1);
+	//创建弹幕体
+	auto label = Label::createWithSystemFont("", "Arail", 20);
+	label->setPosition(Vec2(s_width*BulletPosition_1 / 100.0, s_height*BulletPosition_2/100.0));
+	label->setColor(Color3B(BulletCOLOR_1, BulletCOLOR_2, BulletCOLOR_3));
+	this->addChild(label);
+	//保存上一个弹幕，避免重复显示
+	string lastBullet = "";
+//	this->getChildByTag(1);
 	for (int i = 0; i < PERIODNUMBER; i++){
 		Sleep(PERIOD);
+		//读弹幕
+		if (OPENBULLETSCREEN == 1){
+			Data bullet_d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/MessageToShow.txt"));
+			unsigned char* bullet_tmp = bullet_d.getBytes();
+			int bullet_number = bullet_d.getSize();
+			vector<string> bullets;
+			string bullet_temp = "";
+			for (int i = 0; i < bullet_number; ++i){
+				char mid = (*bullet_tmp);
+                bullet_temp = bullet_temp + mid;
+				++bullet_tmp;
+			}
+			//文字
+			label->setString(bullet_temp);
+			//淡入淡出
+			//auto tintTo = TintTo::create(1.0f, 120.0f, 232.0f, 254.0f);
+			// fades out the sprite in 2 seconds
+			//auto fadeOut = FadeOut::create(1.0f);
+			//auto seq = Sequence::create(tintTo, fadeOut);
+		}
 		//读取robot
 		Data robot_d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/Robot_Current_Position.txt"));
 		unsigned char* robot_tmp = robot_d.getBytes();
@@ -281,10 +342,15 @@ void HelloWorld::readingThread(int w, int h, int s_width, int s_height, int SPEE
 				robotStr = robotStr.substr(robotStr.find(r_c) + 1, robotStr.size());
 			}
 			r_v.push_back(robotStr);
-			auto moveTo = MoveTo::create(SPEED, Vec2(s_width*(atoi(r_v[2].c_str())) / w - r, s_height*(atoi(r_v[1].c_str())) / h - r));
+			auto moveTo = MoveTo::create(SPEED/1000.0, Vec2(s_width*(atoi(r_v[2].c_str())) / w - r, s_height*(atoi(r_v[1].c_str())) / h - r));
+			auto moveToTag = MoveTo::create(SPEED / 1000.0, Vec2(s_width*(atoi(r_v[2].c_str())) / w-r , s_height*(atoi(r_v[1].c_str())) / h-2*r));
+			auto moveToPosition = MoveTo::create(SPEED / 2000.0, Vec2(s_width*(atoi(r_v[3].c_str())) / w - r, s_height*(atoi(r_v[4].c_str())) / h - r));
 			this->getChildByTag(i)->runAction(moveTo);
+			//tag follow robot
+			this->getChildByTag(1000000+i)->runAction(moveToTag);
+			// aim position
+			this->getChildByTag(2000000+i)->runAction(moveToPosition);
 		}
-		
 	}
 	
 }
