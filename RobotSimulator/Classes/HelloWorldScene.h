@@ -19,6 +19,7 @@ public:
 
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
+	void update(float) override;
 };
 
 #endif // __HELLOWORLD_SCENE_H__

@@ -230,6 +230,7 @@ robots.push_back(robot_temp);
 //画robot
 float r = s.width /(2* w);
 float pic = 256.0;
+float pic_aim = 300;
 int robotNumber = atoi(robots[0].c_str());
 Vector<Sprite*> robotSprites;
 for (int i = 1; i <= robotNumber; i++){
@@ -246,30 +247,47 @@ for (int i = 1; i <= robotNumber; i++){
 	mySprite->setTag(i);
 	mySprite->setScale(1.5*r/pic);
 	mySprite->setPosition(Vec2(s.width*(atoi(r_v[2].c_str())) / w-r, s.height*(atoi(r_v[1].c_str())) / h-r));
-	this->addChild(mySprite);
+	
 	//创建编号
 	std::string s_tag = Value(i).asString();
 	auto label = Label::createWithSystemFont(s_tag, "Arail", r / 1.5);
-	label->setPosition(Vec2(s.width*(atoi(r_v[2].c_str())) / w-r, s.height*(atoi(r_v[1].c_str())) / h-2*r));
+	label->setPosition(Vec2(s.width*(atoi(r_v[2].c_str())) / w-r, s.height*(atoi(r_v[1].c_str())) / h));
 	label->setColor(Color3B(255, 0, 0));
 	label->setTag(1000000+i);
 	this->addChild(label);
 	//创建aim place
-	auto aimPlace = Label::createWithSystemFont(s_tag, "Arail", r*1.5);
-	aimPlace->setPosition(Vec2(s.width*(atoi(r_v[3].c_str())) / w - r, s.height*(atoi(r_v[4].c_str())) / h - r));
+	auto aimPlace = Label::createWithSystemFont(s_tag, "Arail", r*1.0);
+	aimPlace->setPosition(Vec2(s.width*(atoi(r_v[4].c_str())) / w - r, s.height*(atoi(r_v[3].c_str())) / h - r));
 	aimPlace->setColor(Color3B(255, 0, 0));
 	aimPlace->setTag(2000000 + i);
 	this->addChild(aimPlace);
-
+	auto aimSprite = Sprite::create("aim.png");
+	aimSprite->setTag(3000000 + i);
+	aimSprite->setScale(2.0*r / pic_aim);
+	aimSprite->setPosition(Vec2(s.width*(atoi(r_v[4].c_str())) / w - r, s.height*(atoi(r_v[3].c_str())) / h - r));
+	this->addChild(aimSprite);
+	//robot put first layer
+	this->addChild(mySprite);
+	//this->retain();
 }
 
+
+
+
+//this->scheduleUpdate();
 
 //开启robot刷新线程
 std::thread t1(&HelloWorld::readingThread, this, w, h, s.width, s.height, SPEED, PERIOD, PERIODNUMBER, OPENBULLETSCREEN,
 	BulletCOLOR_v[0], BulletCOLOR_v[1], BulletCOLOR_v[2], BulletPosition_v[0], BulletPosition_v[1]);
+
 //把线程和主线程分离开
 t1.detach();
+
 return true;
+}
+
+void HelloWorld::update(float delta){
+
 }
 
 void HelloWorld::readingThread(int w, int h, int s_width, int s_height, int SPEED, int PERIOD, int PERIODNUMBER, int OPENBULLETSCREEN,
@@ -284,9 +302,13 @@ void HelloWorld::readingThread(int w, int h, int s_width, int s_height, int SPEE
 	this->addChild(label);
 	//保存上一个弹幕，避免重复显示
 	string lastBullet = "";
+
+	
 //	this->getChildByTag(1);
 	for (int i = 0; i < PERIODNUMBER; i++){
+		//CCLOG("%i",i);
 		Sleep(PERIOD);
+
 		//读弹幕
 		if (OPENBULLETSCREEN == 1){
 			Data bullet_d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/MessageToShow.txt"));
@@ -299,14 +321,21 @@ void HelloWorld::readingThread(int w, int h, int s_width, int s_height, int SPEE
                 bullet_temp = bullet_temp + mid;
 				++bullet_tmp;
 			}
+
+
 			//文字
 			label->setString(bullet_temp);
+			//label->retain();
 			//淡入淡出
 			//auto tintTo = TintTo::create(1.0f, 120.0f, 232.0f, 254.0f);
 			// fades out the sprite in 2 seconds
 			//auto fadeOut = FadeOut::create(1.0f);
 			//auto seq = Sequence::create(tintTo, fadeOut);
 		}
+
+		//cout << "Press any key to continue" << endl;
+		//getchar();
+		
 		//读取robot
 		Data robot_d = fu->getDataFromFile(fu->fullPathForFilename("../TestRobot/Robot_Current_Position.txt"));
 		unsigned char* robot_tmp = robot_d.getBytes();
@@ -327,30 +356,60 @@ void HelloWorld::readingThread(int w, int h, int s_width, int s_height, int SPEE
 			++robot_tmp;
 		}
 		robots.push_back(robot_temp);
+
+				
 		//画robot
 		float r = s_width / (2 * w);
 		float pic = 256.0;
 		int robotNumber = atoi(robots[0].c_str());
-		Vector<Sprite*> robotSprites;
+		//Vector<Sprite*> robotSprites;
+
 		for (int i = 1; i <= robotNumber; i++){
+
+			/*
 			string robotStr = robots[i].c_str();
 			string r_c = ",";
 			vector<string> r_v;
+
+			CCLOG("%i:%i",i, atoi(robots[i].c_str()));
+			
+			/*
 			while (robotStr.find(r_c) != -1)
 			{
 				r_v.push_back(robotStr.substr(0, robotStr.find(r_c)));
 				robotStr = robotStr.substr(robotStr.find(r_c) + 1, robotStr.size());
 			}
+
 			r_v.push_back(robotStr);
-			auto moveTo = MoveTo::create(SPEED/1000.0, Vec2(s_width*(atoi(r_v[2].c_str())) / w - r, s_height*(atoi(r_v[1].c_str())) / h - r));
-			auto moveToTag = MoveTo::create(SPEED / 1000.0, Vec2(s_width*(atoi(r_v[2].c_str())) / w-r , s_height*(atoi(r_v[1].c_str())) / h-2*r));
-			auto moveToPosition = MoveTo::create(SPEED / 2000.0, Vec2(s_width*(atoi(r_v[3].c_str())) / w - r, s_height*(atoi(r_v[4].c_str())) / h - r));
+			*/
+
+			//if (atoi(r_v[2].c_str())<0 || )
+
+
+			auto moveTo = MoveTo::create(SPEED / 1000.0, Vec2(s_width*(i + 5) / w - r, s_height*(i + 1) / h - r));
+			auto moveToTag = MoveTo::create(SPEED / 1000.0, Vec2(s_width*(i + 5) / w - r, s_height*(i + 1) / h));
 			this->getChildByTag(i)->runAction(moveTo);
+			this->getChildByTag(1000000 + i)->runAction(moveToTag);
+
+			/*
+			auto moveTo = MoveTo::create(SPEED/1000.0, Vec2(s_width*(atoi(r_v[2].c_str())) / w - r, s_height*(atoi(r_v[1].c_str())) / h - r));
+			auto moveToTag = MoveTo::create(SPEED / 1000.0, Vec2(s_width*(atoi(r_v[2].c_str())) / w-r , s_height*(atoi(r_v[1].c_str())) / h));
+			auto moveToPosition = MoveTo::create(SPEED / 2000.0, Vec2(s_width*(atoi(r_v[4].c_str())) / w - r, s_height*(atoi(r_v[3].c_str())) / h - r));
+			auto moveToPosition2 = MoveTo::create(SPEED / 2000.0, Vec2(s_width*(atoi(r_v[4].c_str())) / w - r, s_height*(atoi(r_v[3].c_str())) / h - r));
+			this->getChildByTag(i)->runAction(moveTo);
+			//this->getChildByTag(i)->retain();
 			//tag follow robot
 			this->getChildByTag(1000000+i)->runAction(moveToTag);
+			//this->getChildByTag(1000000+i)->retain();
 			// aim position
 			this->getChildByTag(2000000+i)->runAction(moveToPosition);
+			//this->getChildByTag(2000000 + i)->retain();
+			this->getChildByTag(3000000 + i)->runAction(moveToPosition2);
+			//this->getChildByTag(3000000 + i)->retain();
+			*/
 		}
+		
+
 	}
 	
 }
